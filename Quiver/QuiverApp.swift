@@ -9,9 +9,15 @@ import SwiftUI
 
 @main
 struct QuiverApp: App {
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if isLoggedIn == true {
+                MainView()
+            } else {
+                ContentView()
+            }
         }
     }
 }
