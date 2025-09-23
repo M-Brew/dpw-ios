@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import JWTDecode
 
 struct SignInView: View {
     @State private var email = ""
@@ -13,11 +14,15 @@ struct SignInView: View {
     @State private var loading = false
     @State private var errorMessage: String?
     @State private var errors: [String: String]?
+    @State private var showError: Bool = false
 
+    @AppStorage("userId") private var userId = ""
+    @AppStorage("name") private var name = ""
+    @AppStorage("email") private var userEmail = ""
+    @AppStorage("emailVerified") private var emailVerified = false
     @AppStorage("isLoggedIn") private var isLoggedIn = false
-
-    let authService = AuthService()
-    let keychainManager = KeychainManager()
+    
+    @State private var model = AuthViewModel()
 
     var body: some View {
         ZStack {
@@ -110,6 +115,9 @@ struct SignInView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
+            if showError {
+                ToastView(message: errorMessage!, position: .bottom, duration: 3.0, isShowing: $showError)
+            }
         }
     }
 
@@ -131,37 +139,21 @@ struct SignInView: View {
 
     func handleSignIn(email: String, password: String) async {
         do {
-            let signInPayload = SignInPayload(email: email, password: password)
-            let authData: AuthData = try await authService.signIn(
-                payload: signInPayload
-            )
-
-            let accessTokenStatus = keychainManager.saveJWT(
-                jwt: authData.accessToken,
-                service: "com.Quiver.aTService"
-            )
-            if accessTokenStatus == errSecSuccess {
-                print("Access token saved successfully.")
-            } else {
-                print("Error saving access token: \(accessTokenStatus)")
-            }
-
-            let refreshTokenStatus = keychainManager.saveJWT(
-                jwt: authData.refreshToken,
-                service: "com.Quiver.rTService"
-            )
-            if refreshTokenStatus == errSecSuccess {
-                print("Refresh token saved successfully.")
-            } else {
-                print("Error saving refresh token: \(refreshTokenStatus)")
-            }
-
+            let authUser = try await model.signIn(email: email, password: password)
+            
+            userId = authUser.userId
+            name = authUser.name
+            userEmail = authUser.email
+            emailVerified = authUser.emailVerified
+            
             isLoggedIn = true
         } catch let apiError as AuthError {
-            errorMessage = apiError.errorDescription
-            print(apiError.errorDescription!)
+            errorMessage = apiError.errorDescription ?? "An unexpected error occurred"
+            print("error: \(apiError)")
+            showError = true
         } catch {
             errorMessage = "An unexpected error occurred"
+            showError = true
         }
     }
 }

@@ -16,8 +16,15 @@ struct SignUpView: View {
     @State private var loading = false
     @State private var errorMessage: String?
     @State private var errors: [String: String]?
+    @State private var showError: Bool = false
     
+    @AppStorage("userId") private var userId = ""
+    @AppStorage("name") private var name = ""
+    @AppStorage("email") private var userEmail = ""
+    @AppStorage("emailVerified") private var emailVerified = false
     @AppStorage("isLoggedIn") private var isLoggedIn = false
+    
+    @State private var model = AuthViewModel()
 
     let authService = AuthService()
     let keychainManager = KeychainManager()
@@ -46,7 +53,6 @@ struct SignUpView: View {
                             .background(.regularMaterial)
                             .cornerRadius(10)
                             .font(.system(size: 20))
-                            .padding(.bottom, 10)
                         if errors?["firstName"] != nil {
                             Text((errors?["firstName"])!)
                                 .font(.subheadline)
@@ -54,7 +60,7 @@ struct SignUpView: View {
                                 .foregroundStyle(.red)
                         }
                     }
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 5)
                     VStack(alignment: .leading) {
                         Text("Last Name")
                             .font(.system(size: 20, weight: .light, design: .rounded))
@@ -64,7 +70,6 @@ struct SignUpView: View {
                             .background(.regularMaterial)
                             .cornerRadius(10)
                             .font(.system(size: 20))
-                            .padding(.bottom, 10)
                         if errors?["lastName"] != nil {
                             Text((errors?["lastName"])!)
                                 .font(.subheadline)
@@ -72,7 +77,7 @@ struct SignUpView: View {
                                 .foregroundStyle(.red)
                         }
                     }
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 5)
                     VStack(alignment: .leading) {
                         Text("Email")
                             .font(.system(size: 20, weight: .light, design: .rounded))
@@ -83,7 +88,6 @@ struct SignUpView: View {
                             .cornerRadius(10)
                             .font(.system(size: 20))
                             .textInputAutocapitalization(.never)
-                            .padding(.bottom, 10)
                         if errors?["email"] != nil {
                             Text((errors?["email"])!)
                                 .font(.subheadline)
@@ -91,7 +95,7 @@ struct SignUpView: View {
                                 .foregroundStyle(.red)
                         }
                     }
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 5)
                     VStack(alignment: .leading) {
                         Text("Phone Number")
                             .font(.system(size: 20, weight: .light, design: .rounded))
@@ -102,7 +106,6 @@ struct SignUpView: View {
                             .background(.regularMaterial)
                             .cornerRadius(10)
                             .font(.system(size: 20))
-                            .padding(.bottom, 10)
                         if errors?["phoneNumber"] != nil {
                             Text((errors?["phoneNumber"])!)
                                 .font(.subheadline)
@@ -110,7 +113,7 @@ struct SignUpView: View {
                                 .foregroundStyle(.red)
                         }
                     }
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 5)
                     VStack(alignment: .leading) {
                         Text("Password")
                             .font(.system(size: 20, weight: .light, design: .rounded))
@@ -122,7 +125,7 @@ struct SignUpView: View {
                                 .foregroundStyle(.red)
                         }
                     }
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 10)
                     Button {
                         errors = [:]
                         let errors = signUpValidation(
@@ -143,19 +146,32 @@ struct SignUpView: View {
                             loading.toggle()
                         }
                     } label: {
-                        Text("Register")
-                            .frame(maxWidth: .infinity)
-                            .font(.system(size: 24))
+                        if loading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                                .frame(maxWidth: .infinity)
+                                .scaleEffect(1.5)
+                                .tint(.white)
+                                .padding(.vertical, 5)
+                        } else {
+                            Text("Register")
+                                .frame(maxWidth: .infinity)
+                                .font(.system(size: 24))
+                        }
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.white)
                     .background(.black)
                     .buttonStyle(.borderedProminent)
                     .cornerRadius(10)
+                    .disabled(loading)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
+            }
+            if showError {
+                ToastView(message: errorMessage!, position: .bottom, duration: 3.0, isShowing: $showError)
             }
         }
     }
@@ -175,6 +191,12 @@ struct SignUpView: View {
 
         if email.isEmpty {
             errors["email"] = "Email is required"
+        } else {
+            let emailRegex = "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,64}$"
+            let emailPredicate = NSPredicate(format: "SELF MATCHES[c] %@", emailRegex)
+            if !emailPredicate.evaluate(with: email) {
+                errors["email"] = "Invalid email address"
+            }
         }
         
         if phoneNumber.isEmpty {
@@ -195,37 +217,21 @@ struct SignUpView: View {
     
     func handleSignUp(firstName: String, lastName: String, email: String, phoneNumber: String, password: String) async {
         do {
-            let signUpPayload = SignUpPayload(firstName: firstName, lastName: lastName, email: email, phoneNumber: phoneNumber, password: password)
-            let authData: AuthData = try await authService.signUp(
-                payload: signUpPayload
-            )
-
-            let accessTokenStatus = keychainManager.saveJWT(
-                jwt: authData.accessToken,
-                service: "com.Quiver.aTService"
-            )
-            if accessTokenStatus == errSecSuccess {
-                print("Access token saved successfully.")
-            } else {
-                print("Error saving access token: \(accessTokenStatus)")
-            }
-
-            let refreshTokenStatus = keychainManager.saveJWT(
-                jwt: authData.refreshToken,
-                service: "com.Quiver.rTService"
-            )
-            if refreshTokenStatus == errSecSuccess {
-                print("Refresh token saved successfully.")
-            } else {
-                print("Error saving refresh token: \(refreshTokenStatus)")
-            }
-
+            let authUser = try await model.signUp(firstName: firstName, lastName: lastName, email: email, phoneNumber: phoneNumber, password: password)
+            
+            userId = authUser.userId
+            name = authUser.name
+            userEmail = authUser.email
+            emailVerified = authUser.emailVerified
+            
             isLoggedIn = true
         } catch let apiError as AuthError {
-            errorMessage = apiError.errorDescription
-            print(apiError.errorDescription!)
+            errorMessage = apiError.errorDescription ?? "An unexpected error occurred"
+            print("error: \(apiError)")
+            showError = true
         } catch {
             errorMessage = "An unexpected error occurred"
+            showError = true
         }
     }
 }

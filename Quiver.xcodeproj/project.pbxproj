@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		3893EC132E55E7B400C88ECB /* JWTDecode in Frameworks */ = {isa = PBXBuildFile; productRef = 3893EC122E55E7B400C88ECB /* JWTDecode */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		387A8B9A2E4A38D200500301 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3893EC132E55E7B400C88ECB /* JWTDecode in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = Quiver;
 			packageProductDependencies = (
+				3893EC122E55E7B400C88ECB /* JWTDecode */,
 			);
 			productName = Quiver;
 			productReference = 387A8B8C2E4A38CF00500301 /* Quiver.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = 387A8B832E4A38CF00500301;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				3893EC112E55E7B400C88ECB /* XCRemoteSwiftPackageReference "JWTDecode" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 387A8B8D2E4A38CF00500301 /* Products */;
 			projectDirPath = "";
@@ -550,6 +559,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3893EC112E55E7B400C88ECB /* XCRemoteSwiftPackageReference "JWTDecode" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/auth0/JWTDecode.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3893EC122E55E7B400C88ECB /* JWTDecode */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3893EC112E55E7B400C88ECB /* XCRemoteSwiftPackageReference "JWTDecode" */;
+			productName = JWTDecode;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 387A8B842E4A38CF00500301 /* Project object */;
 }

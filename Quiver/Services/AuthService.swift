@@ -24,34 +24,42 @@ struct SignOutPayload: Codable {
     let token: String
 }
 
+struct VerifyEmailPayload: Codable {
+    let code: String
+}
+
 struct AuthData: Codable {
     let accessToken: String
     let refreshToken: String
 }
 
+struct AuthErrorData: Codable {
+    let error: String
+}
+
 enum AuthError: Error {
     case invalidPayload
     case invalidURL
-    case requestFailed(statusCode: Int)
+    case requestFailed(statusCode: Int, errorMessage: String? = "")
     case decodingFailed(Error)
     case unknownError
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidPayload:
             return "Invalid payload"
         case .invalidURL:
             return "Invalid URL"
-        case .requestFailed(let statusCode):
+        case .requestFailed(let statusCode, let errorMessage):
             switch statusCode {
             case 400:
-                return "Invalid credentials"
+                return errorMessage ?? "Invalid credentials"
             case 401:
-                return "Unauthorized"
+                return errorMessage ?? "Unauthorized"
             case 404:
-                return "Not found"
+                return errorMessage ?? "Not found"
             default:
-                return "Request failed with status code: \(statusCode)"
+                return "An error occurred. Please try again later"
             }
         case .decodingFailed(let error):
             return "Data decoding failed: \(error)"
@@ -62,36 +70,64 @@ enum AuthError: Error {
 }
 
 class AuthService {
+    let keychainManager = KeychainManager()
     let baseURL = "http://localhost:8080/api/auth"
-    
+
     func signUp(payload: SignUpPayload) async throws -> AuthData {
         guard let encodedPayload = try? JSONEncoder().encode(payload) else {
             throw AuthError.invalidPayload
         }
-        
+
         guard let url = URL(string: "\(self.baseURL)/sign-up") else {
             throw AuthError.invalidURL
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         do {
-            let (data, response) = try await URLSession.shared.upload(for: request, from: encodedPayload)
+            let (data, response) = try await URLSession.shared.upload(
+                for: request,
+                from: encodedPayload
+            )
             guard let response = response as? HTTPURLResponse else {
                 throw AuthError.unknownError
             }
-            
+
             switch response.statusCode {
             case 201:
-                let decodedData = try JSONDecoder().decode(AuthData.self, from: data)
+                let decodedData = try JSONDecoder().decode(
+                    AuthData.self,
+                    from: data
+                )
                 return decodedData
             case 400:
-                throw AuthError.requestFailed(statusCode: 400)
+                let errorMessage = try JSONDecoder().decode(
+                    AuthErrorData.self,
+                    from: data
+                )
+                throw AuthError.requestFailed(
+                    statusCode: 400,
+                    errorMessage: errorMessage.error
+                )
             case 401:
-                throw AuthError.requestFailed(statusCode: 401)
+                let errorMessage = try JSONDecoder().decode(
+                    AuthErrorData.self,
+                    from: data
+                )
+                throw AuthError.requestFailed(
+                    statusCode: 401,
+                    errorMessage: errorMessage.error
+                )
             case 500:
-                throw AuthError.requestFailed(statusCode: 500)
+                let errorMessage = try JSONDecoder().decode(
+                    AuthErrorData.self,
+                    from: data
+                )
+                throw AuthError.requestFailed(
+                    statusCode: 500,
+                    errorMessage: errorMessage.error
+                )
             default:
                 throw AuthError.requestFailed(statusCode: response.statusCode)
             }
@@ -99,33 +135,105 @@ class AuthService {
             throw AuthError.decodingFailed(decodingError)
         }
     }
-    
+
     func signIn(payload: SignInPayload) async throws -> AuthData {
         guard let encodedPayload = try? JSONEncoder().encode(payload) else {
             throw AuthError.invalidPayload
         }
-        
+
         guard let url = URL(string: "\(self.baseURL)/sign-in") else {
             throw AuthError.invalidURL
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         do {
-            let (data, response) = try await URLSession.shared.upload(for: request, from: encodedPayload)
+            let (data, response) = try await URLSession.shared.upload(
+                for: request,
+                from: encodedPayload
+            )
             guard let response = response as? HTTPURLResponse else {
                 throw AuthError.unknownError
             }
-            
+
             switch response.statusCode {
             case 200:
-                let decodedData = try JSONDecoder().decode(AuthData.self, from: data)
+                let decodedData = try JSONDecoder().decode(
+                    AuthData.self,
+                    from: data
+                )
                 return decodedData
             case 400:
-                throw AuthError.requestFailed(statusCode: 400)
+                let errorMessage = try JSONDecoder().decode(
+                    AuthErrorData.self,
+                    from: data
+                )
+                throw AuthError.requestFailed(
+                    statusCode: 400,
+                    errorMessage: errorMessage.error
+                )
             case 401:
-                throw AuthError.requestFailed(statusCode: 401)
+                let errorMessage = try JSONDecoder().decode(
+                    AuthErrorData.self,
+                    from: data
+                )
+                throw AuthError.requestFailed(
+                    statusCode: 401,
+                    errorMessage: errorMessage.error
+                )
+            case 404:
+                let errorMessage = try JSONDecoder().decode(
+                    AuthErrorData.self,
+                    from: data
+                )
+                throw AuthError.requestFailed(
+                    statusCode: 404,
+                    errorMessage: errorMessage.error
+                )
+            case 500:
+                let errorMessage = try JSONDecoder().decode(
+                    AuthErrorData.self,
+                    from: data
+                )
+                throw AuthError.requestFailed(
+                    statusCode: 500,
+                    errorMessage: errorMessage.error
+                )
+            default:
+                throw AuthError.requestFailed(statusCode: response.statusCode)
+            }
+        } catch let decodingError as DecodingError {
+            throw AuthError.decodingFailed(decodingError)
+        }
+    }
+
+    func signOut(payload: SignOutPayload) async throws -> Bool {
+        guard let encodedPayload = try? JSONEncoder().encode(payload) else {
+            throw AuthError.invalidPayload
+        }
+
+        guard let url = URL(string: "\(self.baseURL)/sign-out") else {
+            throw AuthError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            let (_, response) = try await URLSession.shared.upload(
+                for: request,
+                from: encodedPayload
+            )
+            guard let response = response as? HTTPURLResponse else {
+                throw AuthError.unknownError
+            }
+
+            switch response.statusCode {
+            case 204:
+                return true
+            case 400:
+                throw AuthError.requestFailed(statusCode: 400)
             case 404:
                 throw AuthError.requestFailed(statusCode: 404)
             case 500:
@@ -133,37 +241,78 @@ class AuthService {
             default:
                 throw AuthError.requestFailed(statusCode: response.statusCode)
             }
-        } catch let decodingError as DecodingError {
-            throw AuthError.decodingFailed(decodingError)
-//        } catch {
-//            print("here")
-//            throw AuthError.unknownError
+        } catch {
+            throw AuthError.unknownError
         }
     }
-    
-    func signOut(payload: SignOutPayload) async throws -> Bool {
-        guard let encodedPayload = try? JSONEncoder().encode(payload) else {
-            throw AuthError.invalidPayload
-        }
-        
-        guard let url = URL(string: "\(self.baseURL)/sign-out") else {
+
+    func emailVerificationRequest() async throws -> Bool {
+        guard let url = URL(string: "\(self.baseURL)/email-verification-request") else {
             throw AuthError.invalidURL
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+        request.setValue(
+            "Bearer \(keychainManager.retrieveJWT(service: "com.Quiver.aTService") ?? "")",
+            forHTTPHeaderField: "Authorization"
+        )
+
         do {
-            let (_, response) = try await URLSession.shared.upload(for: request, from: encodedPayload)
+            let (_, response) = try await URLSession.shared.data(for: request)
             guard let response = response as? HTTPURLResponse else {
                 throw AuthError.unknownError
             }
-            
+
             switch response.statusCode {
-            case 204:
+            case 200:
                 return true
             case 400:
                 throw AuthError.requestFailed(statusCode: 400)
+            case 404:
+                throw AuthError.requestFailed(statusCode: 404)
+            case 500:
+                throw AuthError.requestFailed(statusCode: 500)
+            default:
+                throw AuthError.requestFailed(statusCode: response.statusCode)
+            }
+        } catch {
+            throw AuthError.unknownError
+        }
+    }
+    
+    func verifyEmail(payload: VerifyEmailPayload) async throws -> Bool {
+        guard let encodedPayload = try? JSONEncoder().encode(payload) else {
+            throw AuthError.invalidPayload
+        }
+
+        guard let url = URL(string: "\(self.baseURL)/verify-email") else {
+            throw AuthError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(
+            "Bearer \(keychainManager.retrieveJWT(service: "com.Quiver.aTService") ?? "")",
+            forHTTPHeaderField: "Authorization"
+        )
+
+        do {
+            let (_, response) = try await URLSession.shared.upload(
+                for: request,
+                from: encodedPayload
+            )
+            guard let response = response as? HTTPURLResponse else {
+                throw AuthError.unknownError
+            }
+
+            switch response.statusCode {
+            case 200:
+                return true
+            case 400:
+                throw AuthError.requestFailed(statusCode: 400)
+            case 401:
+                throw AuthError.requestFailed(statusCode: 401)
             case 404:
                 throw AuthError.requestFailed(statusCode: 404)
             case 500:

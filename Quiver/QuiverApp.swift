@@ -10,11 +10,16 @@ import SwiftUI
 @main
 struct QuiverApp: App {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
+    @AppStorage("emailVerified") private var emailVerified = false
     
     var body: some Scene {
         WindowGroup {
             if isLoggedIn == true {
-                MainView()
+                if emailVerified == true {
+                    MainView()
+                } else {
+                    OTPView()
+                }
             } else {
                 ContentView()
             }

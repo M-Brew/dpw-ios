@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct DashboardView: View {
+    @AppStorage("name") private var name = ""
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -30,7 +32,7 @@ struct DashboardView: View {
                             .clipShape(.circle)
                             .padding(.trailing, 10)
                             VStack(alignment: .leading) {
-                                Text("Hello Michael")
+                                Text("Hello \(name == "" ? "" : name.split(separator: " ")[0])")
                                     .font(.title)
                                 Text("Welcome")
                                     .font(.subheadline)
