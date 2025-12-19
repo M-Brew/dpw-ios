@@ -9,20 +9,21 @@ import SwiftUI
 
 struct DashboardView: View {
     @AppStorage("name") private var name = ""
+    @AppStorage("profilePicture") private var profilePicture = ""
     
+    let defaultProfilePicture: String = "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=1064&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color(red: 254 / 255, green: 232 / 255, blue: 217 / 255)
-                .ignoresSafeArea()
+                    .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading) {
                         HStack(alignment: .top) {
                             AsyncImage(
-                                url: URL(
-                                    string:
-                                        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=1064&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                                )
+                                url: URL(string: profilePicture)
                             ) { image in
                                 image
                                     .image?.resizable()
@@ -32,8 +33,10 @@ struct DashboardView: View {
                             .clipShape(.circle)
                             .padding(.trailing, 10)
                             VStack(alignment: .leading) {
-                                Text("Hello \(name == "" ? "" : name.split(separator: " ")[0])")
-                                    .font(.title)
+                                Text(
+                                    "Hello \(name == "" ? "" : name.split(separator: " ")[0])"
+                                )
+                                .font(.title)
                                 Text("Welcome")
                                     .font(.subheadline)
                                     .fontWeight(.light)
@@ -53,14 +56,23 @@ struct DashboardView: View {
                             Text("Current Balance")
                                 .font(.subheadline)
                                 .fontWeight(.light)
-                            Text(100, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
-                                .font(.largeTitle)
-                                .padding(.vertical)
+                            Text(
+                                100,
+                                format: .currency(
+                                    code: Locale.current.currency?.identifier
+                                        ?? "USD"
+                                )
+                            )
+                            .font(.largeTitle)
+                            .padding(.vertical)
                             HStack {
                                 Button(action: {
                                     print("Deposit")
                                 }) {
-                                    Label("DEPOSIT", systemImage: "arrow.down.left")
+                                    Label(
+                                        "DEPOSIT",
+                                        systemImage: "arrow.down.left"
+                                    )
                                 }
                                 .font(.subheadline)
                                 .buttonStyle(.bordered)
@@ -70,8 +82,12 @@ struct DashboardView: View {
                                 .cornerRadius(10)
                                 Button(action: {
                                     print("Withdraw")
+                                    print(profilePicture)
                                 }) {
-                                    Label("WITHDRAW", systemImage: "arrow.up.right")
+                                    Label(
+                                        "WITHDRAW",
+                                        systemImage: "arrow.up.right"
+                                    )
                                 }
                                 .font(.subheadline)
                                 .buttonStyle(.bordered)
@@ -82,8 +98,11 @@ struct DashboardView: View {
                                 Button(action: {
                                     print("Wallet")
                                 }) {
-                                    Label("Wallet", systemImage: "creditcard.fill")
-                                        .labelStyle(.iconOnly)
+                                    Label(
+                                        "Wallet",
+                                        systemImage: "creditcard.fill"
+                                    )
+                                    .labelStyle(.iconOnly)
                                 }
                                 .buttonStyle(.bordered)
                                 .foregroundColor(.black)
@@ -191,7 +210,14 @@ struct DashboardView: View {
                         .padding(.bottom, 20)
                         .padding(.horizontal)
                         .background(.white)
-                        .clipShape(UnevenRoundedRectangle(cornerRadii: RectangleCornerRadii(topLeading: 30, topTrailing: 30)))
+                        .clipShape(
+                            UnevenRoundedRectangle(
+                                cornerRadii: RectangleCornerRadii(
+                                    topLeading: 30,
+                                    topTrailing: 30
+                                )
+                            )
+                        )
                     }
                 }
             }

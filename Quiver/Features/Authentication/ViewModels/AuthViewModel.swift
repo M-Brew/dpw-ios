@@ -43,7 +43,9 @@ class AuthViewModel {
             userId: tokenPayload["id"].string ?? "",
             name: tokenPayload["name"].string ?? "",
             email: tokenPayload["email"].string ?? "",
-            emailVerified: tokenPayload["emailVerified"].boolean ?? false
+            emailVerified: tokenPayload["emailVerified"].boolean ?? false,
+            profilePicture: tokenPayload["profilePicture"].string ?? "",
+            role: tokenPayload["role"].string ?? "",
         )
 
         return user
@@ -92,7 +94,9 @@ class AuthViewModel {
             userId: tokenPayload["id"].string ?? "",
             name: tokenPayload["name"].string ?? "",
             email: tokenPayload["email"].string ?? "",
-            emailVerified: tokenPayload["emailVerified"].boolean ?? false
+            emailVerified: tokenPayload["emailVerified"].boolean ?? false,
+            profilePicture: tokenPayload["profilePicture"].string ?? "",
+            role: tokenPayload["role"].string ?? "",
         )
 
         return user

@@ -8,11 +8,11 @@
 import Foundation
 import JWTDecode
 
-protocol RequestInterceptor {
+protocol RequestInterceptor2 {
     func intercept(_ request: URLRequest) async throws -> URLRequest
 }
 
-struct AuthInterceptor: RequestInterceptor {
+struct AuthInterceptor: RequestInterceptor2 {
     
     func intercept(_ request: URLRequest) async throws -> URLRequest {
         var authRequest = request
@@ -35,9 +35,9 @@ struct AuthInterceptor: RequestInterceptor {
 
 class NetworkClient {
     let session: URLSession
-    let requestInterceptors: [RequestInterceptor]
+    let requestInterceptors: [RequestInterceptor2]
 
-    init(session: URLSession = .shared, requestInterceptors: [RequestInterceptor] = []) {
+    init(session: URLSession = .shared, requestInterceptors: [RequestInterceptor2] = []) {
         self.session = session
         self.requestInterceptors = requestInterceptors
     }

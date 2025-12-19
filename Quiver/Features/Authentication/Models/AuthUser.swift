@@ -12,4 +12,6 @@ struct AuthUser {
     let name: String
     let email: String
     let emailVerified: Bool
+    let profilePicture: String?
+    let role: String
 }

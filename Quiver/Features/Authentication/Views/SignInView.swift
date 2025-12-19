@@ -20,6 +20,8 @@ struct SignInView: View {
     @AppStorage("name") private var name = ""
     @AppStorage("email") private var userEmail = ""
     @AppStorage("emailVerified") private var emailVerified = false
+    @AppStorage("role") private var role = ""
+    @AppStorage("profilePicture") private var profilePicture = ""
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     
     @State private var model = AuthViewModel()
@@ -145,6 +147,8 @@ struct SignInView: View {
             name = authUser.name
             userEmail = authUser.email
             emailVerified = authUser.emailVerified
+            role = authUser.role
+            profilePicture = authUser.profilePicture ?? ""
             
             isLoggedIn = true
         } catch let apiError as AuthError {

@@ -7,68 +7,6 @@
 
 import Foundation
 
-struct SignUpPayload: Codable {
-    let firstName: String
-    let lastName: String
-    let email: String
-    let phoneNumber: String
-    let password: String
-}
-
-struct SignInPayload: Codable {
-    let email: String
-    let password: String
-}
-
-struct SignOutPayload: Codable {
-    let token: String
-}
-
-struct VerifyEmailPayload: Codable {
-    let code: String
-}
-
-struct AuthData: Codable {
-    let accessToken: String
-    let refreshToken: String
-}
-
-struct AuthErrorData: Codable {
-    let error: String
-}
-
-enum AuthError: Error {
-    case invalidPayload
-    case invalidURL
-    case requestFailed(statusCode: Int, errorMessage: String? = "")
-    case decodingFailed(Error)
-    case unknownError
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidPayload:
-            return "Invalid payload"
-        case .invalidURL:
-            return "Invalid URL"
-        case .requestFailed(let statusCode, let errorMessage):
-            switch statusCode {
-            case 400:
-                return errorMessage ?? "Invalid credentials"
-            case 401:
-                return errorMessage ?? "Unauthorized"
-            case 404:
-                return errorMessage ?? "Not found"
-            default:
-                return "An error occurred. Please try again later"
-            }
-        case .decodingFailed(let error):
-            return "Data decoding failed: \(error)"
-        case .unknownError:
-            return "An error occurred. Please try again later"
-        }
-    }
-}
-
 class AuthService {
     let keychainManager = KeychainManager()
     let baseURL = "http://localhost:8080/api/auth"
@@ -101,31 +39,13 @@ class AuthService {
                     from: data
                 )
                 return decodedData
-            case 400:
+            case 400...409 | 500:
                 let errorMessage = try JSONDecoder().decode(
                     AuthErrorData.self,
                     from: data
                 )
                 throw AuthError.requestFailed(
-                    statusCode: 400,
-                    errorMessage: errorMessage.error
-                )
-            case 401:
-                let errorMessage = try JSONDecoder().decode(
-                    AuthErrorData.self,
-                    from: data
-                )
-                throw AuthError.requestFailed(
-                    statusCode: 401,
-                    errorMessage: errorMessage.error
-                )
-            case 500:
-                let errorMessage = try JSONDecoder().decode(
-                    AuthErrorData.self,
-                    from: data
-                )
-                throw AuthError.requestFailed(
-                    statusCode: 500,
+                    statusCode: response.statusCode,
                     errorMessage: errorMessage.error
                 )
             default:
@@ -164,40 +84,13 @@ class AuthService {
                     from: data
                 )
                 return decodedData
-            case 400:
+            case 400...409 | 500:
                 let errorMessage = try JSONDecoder().decode(
                     AuthErrorData.self,
                     from: data
                 )
                 throw AuthError.requestFailed(
-                    statusCode: 400,
-                    errorMessage: errorMessage.error
-                )
-            case 401:
-                let errorMessage = try JSONDecoder().decode(
-                    AuthErrorData.self,
-                    from: data
-                )
-                throw AuthError.requestFailed(
-                    statusCode: 401,
-                    errorMessage: errorMessage.error
-                )
-            case 404:
-                let errorMessage = try JSONDecoder().decode(
-                    AuthErrorData.self,
-                    from: data
-                )
-                throw AuthError.requestFailed(
-                    statusCode: 404,
-                    errorMessage: errorMessage.error
-                )
-            case 500:
-                let errorMessage = try JSONDecoder().decode(
-                    AuthErrorData.self,
-                    from: data
-                )
-                throw AuthError.requestFailed(
-                    statusCode: 500,
+                    statusCode: response.statusCode,
                     errorMessage: errorMessage.error
                 )
             default:
@@ -232,12 +125,8 @@ class AuthService {
             switch response.statusCode {
             case 204:
                 return true
-            case 400:
-                throw AuthError.requestFailed(statusCode: 400)
-            case 404:
-                throw AuthError.requestFailed(statusCode: 404)
-            case 500:
-                throw AuthError.requestFailed(statusCode: 500)
+            case 400...409 | 500:
+                throw AuthError.requestFailed(statusCode: response.statusCode)
             default:
                 throw AuthError.requestFailed(statusCode: response.statusCode)
             }
@@ -247,7 +136,19 @@ class AuthService {
     }
 
     func emailVerificationRequest() async throws -> Bool {
-        guard let url = URL(string: "\(self.baseURL)/email-verification-request") else {
+        let networkService: NetworkService = {
+            let requestInterceptor = AuthRequestInterceptor()
+            let responseInterceptor = AuthResponseInterceptor()
+            let networkService = NetworkService(
+                requestInterceptors: [requestInterceptor],
+                responseInterceptors: [responseInterceptor]
+            )
+            return networkService
+        }()
+        
+        guard
+            let url = URL(string: "\(self.baseURL)/email-verification-request")
+        else {
             throw AuthError.invalidURL
         }
         var request = URLRequest(url: url)
@@ -259,7 +160,7 @@ class AuthService {
         )
 
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await networkService.perform(request)
             guard let response = response as? HTTPURLResponse else {
                 throw AuthError.unknownError
             }
@@ -267,12 +168,8 @@ class AuthService {
             switch response.statusCode {
             case 200:
                 return true
-            case 400:
-                throw AuthError.requestFailed(statusCode: 400)
-            case 404:
-                throw AuthError.requestFailed(statusCode: 404)
-            case 500:
-                throw AuthError.requestFailed(statusCode: 500)
+            case 400...409 | 500:
+                throw AuthError.requestFailed(statusCode: response.statusCode)
             default:
                 throw AuthError.requestFailed(statusCode: response.statusCode)
             }
@@ -280,8 +177,18 @@ class AuthService {
             throw AuthError.unknownError
         }
     }
-    
+
     func verifyEmail(payload: VerifyEmailPayload) async throws -> Bool {
+        let networkService: NetworkService = {
+            let requestInterceptor = AuthRequestInterceptor()
+            let responseInterceptor = AuthResponseInterceptor()
+            let networkService = NetworkService(
+                requestInterceptors: [requestInterceptor],
+                responseInterceptors: [responseInterceptor]
+            )
+            return networkService
+        }()
+        
         guard let encodedPayload = try? JSONEncoder().encode(payload) else {
             throw AuthError.invalidPayload
         }
@@ -291,6 +198,7 @@ class AuthService {
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.httpBody = encodedPayload
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(
             "Bearer \(keychainManager.retrieveJWT(service: "com.Quiver.aTService") ?? "")",
@@ -298,7 +206,40 @@ class AuthService {
         )
 
         do {
-            let (_, response) = try await URLSession.shared.upload(
+            let (_, response) = try await networkService.perform(request)
+            guard let response = response as? HTTPURLResponse else {
+                throw AuthError.unknownError
+            }
+
+            switch response.statusCode {
+            case 200:
+                return true
+            case 400...409 | 500:
+                throw AuthError.requestFailed(statusCode: response.statusCode)
+            default:
+                throw AuthError.requestFailed(statusCode: response.statusCode)
+            }
+        } catch {
+            throw AuthError.unknownError
+        }
+    }
+    
+    func updateToken(payload: UpdateTokenPayload) async throws
+        -> UpdateTokenData
+    {
+        guard let encodedPayload = try? JSONEncoder().encode(payload) else {
+            throw AuthError.invalidPayload
+        }
+
+        guard let url = URL(string: "\(self.baseURL)/token") else {
+            throw AuthError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            let (data, response) = try await URLSession.shared.upload(
                 for: request,
                 from: encodedPayload
             )
@@ -308,20 +249,95 @@ class AuthService {
 
             switch response.statusCode {
             case 200:
-                return true
-            case 400:
-                throw AuthError.requestFailed(statusCode: 400)
-            case 401:
-                throw AuthError.requestFailed(statusCode: 401)
-            case 404:
-                throw AuthError.requestFailed(statusCode: 404)
-            case 500:
-                throw AuthError.requestFailed(statusCode: 500)
+                let decodedData = try JSONDecoder().decode(
+                    UpdateTokenData.self,
+                    from: data
+                )
+                return decodedData
+            case 400...409 | 500:
+                let errorMessage = try JSONDecoder().decode(
+                    AuthErrorData.self,
+                    from: data
+                )
+                throw AuthError.requestFailed(
+                    statusCode: response.statusCode,
+                    errorMessage: errorMessage.error
+                )
             default:
                 throw AuthError.requestFailed(statusCode: response.statusCode)
             }
-        } catch {
-            throw AuthError.unknownError
+        } catch let decodingError as DecodingError {
+            throw AuthError.decodingFailed(decodingError)
+        }
+    }
+}
+
+struct SignUpPayload: Codable {
+    let firstName: String
+    let lastName: String
+    let email: String
+    let phoneNumber: String
+    let password: String
+}
+
+struct SignInPayload: Codable {
+    let email: String
+    let password: String
+}
+
+struct SignOutPayload: Codable {
+    let token: String
+}
+
+struct VerifyEmailPayload: Codable {
+    let code: String
+}
+
+struct UpdateTokenPayload: Codable {
+    let token: String
+}
+
+struct AuthData: Codable {
+    let accessToken: String
+    let refreshToken: String
+}
+
+struct AuthErrorData: Codable {
+    let error: String
+}
+
+struct UpdateTokenData: Codable {
+    let accessToken: String
+}
+
+enum AuthError: Error {
+    case invalidPayload
+    case invalidURL
+    case requestFailed(statusCode: Int, errorMessage: String? = "")
+    case decodingFailed(Error)
+    case unknownError
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidPayload:
+            return "Invalid payload"
+        case .invalidURL:
+            return "Invalid URL"
+        case .requestFailed(let statusCode, let errorMessage):
+            switch statusCode {
+            case 400:
+                return errorMessage ?? "Invalid credentials"
+            case 401:
+                return errorMessage ?? "Unauthorized"
+            case 404:
+                return errorMessage ?? "Not found"
+            default:
+                return "An error occurred. Please try again later"
+            }
+        case .decodingFailed(let error):
+            return "Data decoding failed: \(error)"
+        case .unknownError:
+            return "An error occurred. Please try again later"
         }
     }
 }
