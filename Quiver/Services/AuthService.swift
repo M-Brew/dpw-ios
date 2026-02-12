@@ -9,7 +9,7 @@ import Foundation
 
 class AuthService {
     let keychainManager = KeychainManager()
-    let baseURL = "http://localhost:8080/api/auth"
+    let baseURL = "\(AppConfig.baseURL)/api/auth"
 
     func signUp(payload: SignUpPayload) async throws -> AuthData {
         guard let encodedPayload = try? JSONEncoder().encode(payload) else {

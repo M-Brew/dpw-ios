@@ -40,11 +40,12 @@ class AuthResponseInterceptor: ResponseInterceptor {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkInterceptorError.invalidResponse
         }
+        print(httpResponse.statusCode)
 
         let requestURLString = httpResponse.url?.absoluteString
 
         if (httpResponse.statusCode == 401 || httpResponse.statusCode == 403)
-            && requestURLString == "http://localhost:8080/api/auth/token"
+            && requestURLString == "\(AppConfig.baseURL)/api/auth/token"
         {
             isLoggedIn = false
             throw NetworkInterceptorError.missingOrInvalidToken(
@@ -56,7 +57,7 @@ class AuthResponseInterceptor: ResponseInterceptor {
             throw NetworkInterceptorError.expiredToken
         }
 
-        guard (200...299).contains(httpResponse.statusCode) else {
+        guard (200...299).contains(httpResponse.statusCode) || httpResponse.statusCode == 400 else {
             throw NetworkInterceptorError.unknownError
         }
     }
@@ -92,11 +93,11 @@ class NetworkService {
                 else {
                     throw NetworkInterceptorError.tokenNotFound
                 }
-                
+
                 let data = try await authService.updateToken(
                     payload: UpdateTokenPayload(token: refreshToken)
                 )
-                
+
                 let accessTokenStatus = keychainManager.saveJWT(
                     jwt: data.accessToken,
                     service: "com.Quiver.aTService"
@@ -115,7 +116,9 @@ class NetworkService {
         }
     }
 
-    private func _perform(_ request: URLRequest) async throws -> (Data, URLResponse) {
+    private func _perform(_ request: URLRequest) async throws -> (
+        Data, URLResponse
+    ) {
         var adaptedRequest = request
         for interceptor in self.requestInterceptors {
             adaptedRequest = try interceptor.adapt(adaptedRequest)
@@ -123,13 +126,21 @@ class NetworkService {
         print("Request: \(adaptedRequest)")
 
         let (data, response) = try await session.data(for: adaptedRequest)
-        print("Response: \(response)")
-//        print("Data: \(data)")
 
         for interceptor in self.responseInterceptors {
             try interceptor.intercept(data, response)
         }
-
+        
+        print("status: \((response as! HTTPURLResponse).statusCode)")
+        
+        let json = try JSONSerialization.jsonObject(with: data, options: [])
+        
+        if let dict = json as? [String: Any] {
+            print("data: \(dict)")
+        } else if let array = json as? [[String: Any]] {
+            print("data: \(array)")
+        }
+        
         return (data, response)
     }
 }
@@ -163,4 +174,3 @@ enum NetworkInterceptorError: Error {
         }
     }
 }
-

@@ -15,18 +15,28 @@ struct PasswordField: View {
         ZStack(alignment: .trailing) {
             if hidden {
                 SecureField("Password", text: $password)
-                    .frame(height: 48)
-                    .padding(.horizontal, 10)
-                    .background(.regularMaterial)
-                    .cornerRadius(10)
                     .font(.system(size: 20))
+                    .padding(12)
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.gray.opacity(0.3))
+                    )
+                    .disableAutocorrection(true)
+                    .textInputAutocapitalization(.never)
             } else {
                 TextField("Password", text: $password)
-                    .frame(height: 48)
-                    .padding(.horizontal, 10)
-                    .background(.regularMaterial)
-                    .cornerRadius(10)
                     .font(.system(size: 20))
+                    .padding(12)
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.gray.opacity(0.3))
+                    )
+                    .disableAutocorrection(true)
+                    .textInputAutocapitalization(.never)
             }
             Button(
                 action: {

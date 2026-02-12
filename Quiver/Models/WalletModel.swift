@@ -7,19 +7,21 @@
 
 import Foundation
 
-struct ContactModel: Identifiable, Codable {
+struct ContactModel: Identifiable, Codable, Hashable {
     let id: String
     let walletId: String
     let code: String
+    let userId: String
     let userName: String
     let userImage: String?
+    let status: String?
     
     enum CodingKeys: String, CodingKey {
-        case id = "_id", walletId, code, userName, userImage
+        case id = "_id", walletId, code, userId, userName, userImage, status
     }
 }
 
-struct WalletModel: Identifiable, Codable {
+struct WalletModel: Identifiable, Codable, Hashable {
     let id: String
     let userId: String
     let userName: String
